@@ -1,12 +1,17 @@
-# React + Vite
+# lp2d-grafico
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Método Gráfico para Programación Lineal en 2 Variables (LP 2D).
 
-Currently, two official plugins are available:
+Este proyecto permite trazar restricciones, visualizar la región factible, arrastrar la recta iso-utilidad/costo, y calcular la solución óptima (vértices y valor de Z).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 📌 Nombre
+- **lp** = Linear Programming (Programación Lineal)  
+- **2d** = Dos variables (plano bidimensional)  
+- **grafico** = Método gráfico  
 
-## Expanding the ESLint configuration
+## 🚀 Instalación y uso
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Clonar el repo:
+```bash
+git clone https://github.com/alecaballero17/lp2d-grafico.git
+cd lp2d-grafico
