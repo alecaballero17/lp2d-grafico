@@ -8,14 +8,13 @@ import React, { useMemo, useRef, useState, useEffect } from "react";
  * • Pinte región factible, puntos vértice y línea iso-objetivo
  * • Calcula la solución óptima evaluando los vértices factibles
  *
- * Estilo: Tailwind CSS (ya disponible en el entorno del canvas)
+ * Estilo: Tailwind CSS
  * Componentes: sin dependencias externas
  */
 
 // Types
 const Sense = { LE: "<=", GE: ">=", EQ: "=" };
 const OptType = { MAX: "MAX", MIN: "MIN" };
-
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -24,7 +23,6 @@ function clamp(n, a, b) {
 function parseNum(v) {
   if (typeof v === "number") return v;
   if (!v) return 0;
-  // Permite comas decimales
   const s = String(v).replace(/,/, ".");
   const n = Number(s);
   return Number.isFinite(n) ? n : 0;
@@ -240,9 +238,6 @@ function drawGrid(ctx, bounds, width, height, padding = 48) {
 }
 
 function drawFeasible(ctx, restrictions, bounds, width, height, padding = 48) {
-  // Construir polígono recortando un rectángulo grande por cada restricción
-  // Aproximación: muestrear contorno con ray casting en una rejilla fina de ángulos alrededor del centro.
-  // Para simplicidad y robustez, muestreamos direcciones y buscamos intersecciones con fronteras.
   const center = { x: (bounds.xmin + bounds.xmax) / 2, y: (bounds.ymin + bounds.ymax) / 2 };
   const rays = 720; // buena suavidad
   const pts = [];
@@ -259,19 +254,15 @@ function drawFeasible(ctx, restrictions, bounds, width, height, padding = 48) {
   for (let k = 0; k < rays; k++) {
     const ang = (2 * Math.PI * k) / rays;
     const dir = { x: Math.cos(ang), y: Math.sin(ang) };
-    // Avanza desde el centro hasta que toque alguna frontera de media-plano
     let tMin = Infinity;
-    // Encontrar la primera colisión con las fronteras activas del polígono factible
     const all = [...borderLines, ...halfLines];
     for (const L of all) {
-      // Línea L: ax x + by y = c, buscamos t s.t. ax (cx + t dx) + by (cy + t dy) = c
       const num = L.c - (L.ax * center.x + L.by * center.y);
       const den = L.ax * dir.x + L.by * dir.y;
       if (Math.abs(den) < 1e-12) continue;
       const t = num / den;
       if (t <= 0) continue;
       const p = { x: center.x + t * dir.x, y: center.y + t * dir.y };
-      // Debe cumplir todas las semirrectas <=/=>
       let ok = true;
       for (const R of halfLines) if (!satisfies(R, p)) { ok = false; break; }
       if (ok) tMin = Math.min(tMin, t);
@@ -305,28 +296,16 @@ function drawConstraintLines(ctx, restrictions, bounds, width, height, padding =
   ctx.strokeStyle = "#3b82f6"; // blue-500
 
   for (const r of restrictions) {
-    // dibujar segmento de la recta dentro de bounds
-    // hallar dos puntos de cruce con el rectángulo de dibujo
     const candidates = [];
-    // x = xmin
     if (Math.abs(r.by) > 1e-12) {
-      const y = (r.c - r.ax * bounds.xmin) / r.by;
-      candidates.push({ x: bounds.xmin, y });
+      const y1 = (r.c - r.ax * bounds.xmin) / r.by;
+      const y2 = (r.c - r.ax * bounds.xmax) / r.by;
+      candidates.push({ x: bounds.xmin, y: y1 }, { x: bounds.xmax, y: y2 });
     }
-    // x = xmax
-    if (Math.abs(r.by) > 1e-12) {
-      const y = (r.c - r.ax * bounds.xmax) / r.by;
-      candidates.push({ x: bounds.xmax, y });
-    }
-    // y = ymin
     if (Math.abs(r.ax) > 1e-12) {
-      const x = (r.c - r.by * bounds.ymin) / r.ax;
-      candidates.push({ x, y: bounds.ymin });
-    }
-    // y = ymax
-    if (Math.abs(r.ax) > 1e-12) {
-      const x = (r.c - r.by * bounds.ymax) / r.ax;
-      candidates.push({ x, y: bounds.ymax });
+      const x1 = (r.c - r.by * bounds.ymin) / r.ax;
+      const x2 = (r.c - r.by * bounds.ymax) / r.ax;
+      candidates.push({ x: x1, y: bounds.ymin }, { x: x2, y: bounds.ymax });
     }
 
     const inside = candidates.filter((p) => withinBounds(p, bounds));
@@ -340,8 +319,7 @@ function drawConstraintLines(ctx, restrictions, bounds, width, height, padding =
     ctx.lineTo(B.x, B.y);
     ctx.stroke();
 
-    // indicador de sentido (flechas pequeñas hacia la zona válida)
-    // probamos un punto medio desplazado hacia el semiplano válido
+    // Indicador de sentido
     const mid = { x: (inside[0].x + inside[1].x) / 2, y: (inside[0].y + inside[1].y) / 2 };
     const n = { x: r.ax, y: r.by };
     const mag = Math.hypot(n.x, n.y) || 1;
@@ -357,7 +335,6 @@ function drawConstraintLines(ctx, restrictions, bounds, width, height, padding =
     ctx.strokeStyle = "#93c5fd"; // blue-300
     ctx.stroke();
 
-    // punta de flecha
     ctx.beginPath();
     const ah = 6;
     ctx.moveTo(T.x, T.y);
@@ -384,7 +361,6 @@ function drawVertices(ctx, vertices, bounds, width, height, padding = 48) {
 }
 
 function drawObjective(ctx, objective, zValue, bounds, width, height, padding = 48) {
-  // dibuja recta cx x + cy y = zValue
   const { cx, cy } = objective;
   if (Math.abs(cx) < 1e-12 && Math.abs(cy) < 1e-12) return;
   const candidates = [];
@@ -493,6 +469,15 @@ function ExamplePresetButton({ onLoad }) {
   );
 }
 
+function Panel({ title, children, className = "" }) {
+  return (
+    <div className={`p-4 border rounded-2xl shadow-sm bg-white ${className}`}>
+      {title ? <h2 className="font-semibold mb-3">{title}</h2> : null}
+      {children}
+    </div>
+  );
+}
+
 export default function LP2DMetodoGrafico() {
   const [rows, setRows] = useState([
     { ax: "1", by: "2", sense: Sense.LE, c: "14" },
@@ -522,7 +507,6 @@ export default function LP2DMetodoGrafico() {
   const best = useMemo(() => optimize(candidateVertices, objective, optType), [candidateVertices, objective, optType]);
 
   useEffect(() => {
-    // si tenemos solución, ubicar zProbe a través de ese Z; si no, 0
     if (best) setZProbe(objective.cx * best.point.x + objective.cy * best.point.y);
   }, [best, objective.cx, objective.cy]);
 
@@ -547,13 +531,13 @@ export default function LP2DMetodoGrafico() {
     // grid + axes
     drawGrid(ctx, bounds, w, h);
 
-    // feasible region (soft fill)
-    const polyPts = drawFeasible(ctx, restrictions, bounds, w, h);
+    // feasible region
+    drawFeasible(ctx, restrictions, bounds, w, h);
 
     // lines
     drawConstraintLines(ctx, restrictions, bounds, w, h);
 
-    // vertices (computed)
+    // vertices
     drawVertices(ctx, candidateVertices, bounds, w, h);
 
     // objective iso-line (at zProbe)
@@ -581,16 +565,12 @@ export default function LP2DMetodoGrafico() {
     if (!canvas) return;
     let dragging = false;
 
-    const onDown = (e) => {
-      dragging = true;
-    };
+    const onDown = () => { dragging = true; };
     const onMove = (e) => {
       if (!dragging) return;
       const rect = canvas.getBoundingClientRect();
       const x = clamp(e.clientX - rect.left, 0, rect.width);
       const y = clamp(e.clientY - rect.top, 0, rect.height);
-      // Convertir un punto pantalla a mundo y proyectarlo sobre la iso-línea para obtener z
-      // Tomamos el punto y calculamos z = cx x + cy y
       const padding = 48;
       const w = rect.width - 2 * padding;
       const h = rect.height - 2 * padding;
@@ -645,22 +625,33 @@ export default function LP2DMetodoGrafico() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* Panel Izquierdo: Formulario */}
           <div className="space-y-5">
-            <section className="p-4 border rounded-2xl shadow-sm">
-              <h2 className="font-semibold mb-3">Función Objetivo</h2>
+            {/* Función Objetivo */}
+            <Panel title="Función Objetivo">
               <div className="grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-3"><Select value={optType} onChange={setOptType} options={[OptType.MAX, OptType.MIN]} /></div>
+                <div className="col-span-3">
+                  <Select value={optType} onChange={setOptType} options={[OptType.MAX, OptType.MIN]} />
+                </div>
                 <div className="col-span-2 text-center font-medium">Z =</div>
-                <div className="col-span-2 flex items-center gap-1"><span className="text-sm text-gray-600">c₁</span><NumberInput value={cx} onChange={setCx} placeholder="c1"/></div>
+                <div className="col-span-2 flex items-center gap-1">
+                  <span className="text-sm text-gray-600">c₁</span>
+                  <NumberInput value={cx} onChange={setCx} placeholder="c1"/>
+                </div>
                 <div className="col-span-1 text-center font-medium">x₁ +</div>
-                <div className="col-span-2 flex items-center gap-1"><span className="text-sm text-gray-600">c₂</span><NumberInput value={cy} onChange={setCy} placeholder="c2"/></div>
+                <div className="col-span-2 flex items-center gap-1">
+                  <span className="text-sm text-gray-600">c₂</span>
+                  <NumberInput value={cy} onChange={setCy} placeholder="c2"/>
+                </div>
                 <div className="col-span-1 text-center font-medium">x₂</div>
               </div>
-              <div className="mt-2 text-xs text-gray-500">Arrastra sobre el lienzo para mover la recta iso-{optType === OptType.MAX ? "utilidad" : "costo"} (valor Z).</div>
-            </section>
+              <div className="mt-2 text-xs text-gray-500">
+                Arrastra sobre el lienzo para mover la recta iso-{optType === OptType.MAX ? "utilidad" : "costo"} (valor Z).
+              </div>
+            </Panel>
 
-            <section className="p-4 border rounded-2xl shadow-sm">
+            {/* Restricciones */}
+            <Panel title="Restricciones">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold">Restricciones</h2>
+                <div className="text-sm text-gray-600">Define cada restricción como: a·x₁ + b·x₂ {`{≤, ≥, =}`} c</div>
                 <button onClick={addRow} className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-sm hover:bg-blue-700">+ Agregar</button>
               </div>
               <div className="space-y-2">
@@ -672,13 +663,18 @@ export default function LP2DMetodoGrafico() {
                 <input id="nn" type="checkbox" checked={nonNegativity} onChange={(e)=>setNonNegativity(e.target.checked)} />
                 <label htmlFor="nn" className="text-sm">Incluir no negatividad (x₁ ≥ 0, x₂ ≥ 0)</label>
               </div>
-            </section>
+            </Panel>
 
-            <section className="p-4 border rounded-2xl shadow-sm">
-              <h2 className="font-semibold mb-2">Resultados</h2>
+            {/* Resultados */}
+            <Panel title="Resultados">
               {best ? (
                 <div className="text-sm">
-                  <div className="mb-2">Óptimo <span className="font-semibold">{optType}</span> en <span className="font-mono">(x₁*, x₂*) = ({best.point.x.toFixed(6)}, {best.point.y.toFixed(6)})</span></div>
+                  <div className="mb-2">
+                    Óptimo <span className="font-semibold">{optType}</span> en{" "}
+                    <span className="font-mono">
+                      (x₁*, x₂*) = ({best.point.x.toFixed(6)}, {best.point.y.toFixed(6)})
+                    </span>
+                  </div>
                   <div>Valor óptimo: <span className="font-mono">Z* = {best.z.toFixed(6)}</span></div>
                 </div>
               ) : (
@@ -686,7 +682,9 @@ export default function LP2DMetodoGrafico() {
               )}
 
               <details className="mt-3">
-                <summary className="text-sm cursor-pointer select-none">Ver vértices factibles ({solutionList.length})</summary>
+                <summary className="text-sm cursor-pointer select-none">
+                  Ver vértices factibles ({solutionList.length})
+                </summary>
                 <div className="mt-2 max-h-48 overflow-auto border rounded-xl">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -710,52 +708,44 @@ export default function LP2DMetodoGrafico() {
                   </table>
                 </div>
               </details>
-            </section>
+            </Panel>
           </div>
 
           {/* Panel Derecho: Canvas */}
-<div className="p-4 border rounded-2xl shadow-sm">
-  <div className="flex items-center justify-between mb-2">
-    <h2 className="font-semibold">Plano x₁–x₂</h2>
-    <div className="flex items-center gap-2 text-xs text-gray-500">
-      <span>Arrastra para mover la recta de Z</span>
+          <Panel title="Plano x₁–x₂">
+            {/* Contenedor que recorta y centra el canvas */}
+            <div className="relative flex justify-center items-center overflow-hidden rounded-2xl border">
+              <canvas
+                ref={canvasRef}
+                width={size.w}
+                height={size.h}
+                className="max-w-full h-auto shadow-md"
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Ancho</label>
+                <NumberInput
+                  value={size.w}
+                  onChange={(v) => setSize((s) => ({ ...s, w: parseNum(v) || 800 }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Alto</label>
+                <NumberInput
+                  value={size.h}
+                  onChange={(v) => setSize((s) => ({ ...s, h: parseNum(v) || 520 }))}
+                />
+              </div>
+            </div>
+          </Panel>
+        </div>
+
+        <footer className="mt-6 text-xs text-gray-500">
+          Sugerencia: Ingresa coeficientes fraccionarios (p. ej., "2.5") o enteros. Usa los presets para probar casos típicos de MAX y MIN.
+        </footer>
+      </div>
     </div>
-  </div>
-
-  {/* 🔧 Contenedor que recorta y centra el canvas */}
-  <div className="relative flex justify-center items-center overflow-hidden rounded-2xl border">
-    <canvas
-      ref={canvasRef}
-      width={size.w}
-      height={size.h}
-      className="max-w-full h-auto shadow-md"
-    />
-  </div>
-
-  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-    <div>
-      <label className="block text-xs text-gray-600 mb-1">Ancho</label>
-      <NumberInput
-        value={size.w}
-        onChange={(v) => setSize((s) => ({ ...s, w: parseNum(v) || 800 }))}
-      />
-    </div>
-    <div>
-      <label className="block text-xs text-gray-600 mb-1">Alto</label>
-      <NumberInput
-        value={size.h}
-        onChange={(v) => setSize((s) => ({ ...s, h: parseNum(v) || 520 }))}
-      />
-    </div>
-  </div>
-</div>
-
-</div>
-
-<footer className="mt-6 text-xs text-gray-500">
-  Sugerencia: Ingresa coeficientes fraccionarios (p. ej., "2.5") o enteros. Usa los presets para probar casos típicos de MAX y MIN.
-</footer>
-</div>
-</div>
-);
+  );
 }
