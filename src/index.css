@@ -1,1 +1,8 @@
 @import "tailwindcss";
+/* Esto hace que el cambio claro/oscuro no parpadee fuerte */
+html {
+  color-scheme: light dark;
+}
+* {
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}

@@ -1,3 +1,4 @@
+// src/LP2DMetodoGrafico.jsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
 
 /**
@@ -162,11 +163,61 @@ function worldToScreen({ x, y }, bounds, width, height, padding = 48) {
   return { x: sx, y: sy };
 }
 
+/* ====== Dark/Light palette helpers ====== */
+function isDarkTheme() {
+  return document.documentElement.classList.contains("dark");
+}
+function palette() {
+  const dark = isDarkTheme();
+  if (!dark) {
+    return {
+      gridMinor: "#f3f4f6",       // slate-100
+      gridMajor: "#e5e7eb",       // slate-200
+      label: "#6b7280",           // slate-500
+      axisLabel: "#111827",       // slate-900
+      constraint: "#3b82f6",      // blue-500
+      constraintHint: "#93c5fd",  // blue-300
+      feasibleFill: "rgba(59,130,246,0.12)", // blue-500 @ 12%
+      vertex: "#ef4444",          // red-500
+      objective: "#10b981",       // emerald-500
+      optPoint: "#16a34a",        // green-600
+      optText: "#065f46"          // green-900
+    };
+  }
+  return {
+    gridMinor: "#334155",         // slate-700
+    gridMajor: "#475569",         // slate-600
+    label: "#cbd5e1",             // slate-300
+    axisLabel: "#e2e8f0",         // slate-200
+    constraint: "#60a5fa",        // blue-400
+    constraintHint: "#93c5fd",    // blue-300
+    feasibleFill: "rgba(59,130,246,0.18)",
+    vertex: "#f87171",            // red-400
+    objective: "#34d399",         // emerald-400
+    optPoint: "#22c55e",          // green-500
+    optText: "#a7f3d0"            // emerald-200
+  };
+}
+/* ======================================== */
+
 function drawGrid(ctx, bounds, width, height, padding = 48) {
-  ctx.save();
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = "#e5e7eb"; // gray-200
-  ctx.fillStyle = "#6b7280"; // gray-500 for labels
+  /** ===== Paleta fija (modo claro) para el canvas ===== */
+const pal = {
+  // ⇩ misma grilla que “antes” (sutil, sin brillos)
+  gridMinor: "#334155",     // slate-700
+  gridMajor: "#475569",     // slate-600
+  label: "#cbd5e1",         // slate-300
+  axisLabel: "#e2e8f0",     // slate-200
+
+  constraint: "#3b82f6",    // blue-500
+  constraintHint: "#93c5fd",// blue-300
+  feasibleFill: "rgba(59,130,246,0.18)",
+  vertex: "#f87171",        // red-400
+  objective: "#34d399",     // emerald-400
+  optPoint: "#22c55e",      // green-500
+  optText: "#a7f3d0"        // emerald-200
+};
+
 
   // axes
   const O = worldToScreen({ x: 0, y: 0 }, bounds, width, height, padding);
@@ -204,9 +255,9 @@ function drawGrid(ctx, bounds, width, height, padding = 48) {
     ctx.beginPath();
     ctx.moveTo(p.x, padding);
     ctx.lineTo(p.x, height - padding);
-    ctx.strokeStyle = "#f3f4f6"; // gray-100
+    ctx.strokeStyle = pal.gridMinor;
     ctx.stroke();
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = pal.label;
     ctx.fillText(Number(x.toFixed(4)).toString(), p.x, O.y + 4);
   }
 
@@ -217,14 +268,14 @@ function drawGrid(ctx, bounds, width, height, padding = 48) {
     ctx.beginPath();
     ctx.moveTo(padding, p.y);
     ctx.lineTo(width - padding, p.y);
-    ctx.strokeStyle = "#f3f4f6";
+    ctx.strokeStyle = pal.gridMinor;
     ctx.stroke();
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = pal.label;
     ctx.fillText(Number(y.toFixed(4)).toString(), O.x - 6, p.y);
   }
 
   // labels
-  ctx.fillStyle = "#111827"; // gray-900
+  ctx.fillStyle = pal.axisLabel;
   ctx.textAlign = "right";
   ctx.fillText("x₁", width - padding + 20, O.y + 2);
   ctx.save();
@@ -283,7 +334,7 @@ function drawFeasible(ctx, restrictions, bounds, width, height, padding = 48) {
     ctx.lineTo(P.x, P.y);
   }
   ctx.closePath();
-  ctx.fillStyle = "rgba(59,130,246,0.12)"; // blue-500 @ 12%
+  ctx.fillStyle = palette().feasibleFill;
   ctx.fill();
   ctx.restore();
 
@@ -292,8 +343,8 @@ function drawFeasible(ctx, restrictions, bounds, width, height, padding = 48) {
 
 function drawConstraintLines(ctx, restrictions, bounds, width, height, padding = 48) {
   ctx.save();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "#3b82f6"; // blue-500
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = palette().constraint;
 
   for (const r of restrictions) {
     const candidates = [];
@@ -332,7 +383,7 @@ function drawConstraintLines(ctx, restrictions, bounds, width, height, padding =
     ctx.beginPath();
     ctx.moveTo(M.x, M.y);
     ctx.lineTo(T.x, T.y);
-    ctx.strokeStyle = "#93c5fd"; // blue-300
+    ctx.strokeStyle = palette().constraintHint;
     ctx.stroke();
 
     ctx.beginPath();
@@ -341,7 +392,7 @@ function drawConstraintLines(ctx, restrictions, bounds, width, height, padding =
     ctx.lineTo(T.x - ah * Math.cos(dir - 0.3), T.y - ah * Math.sin(dir - 0.3));
     ctx.lineTo(T.x - ah * Math.cos(dir + 0.3), T.y - ah * Math.sin(dir + 0.3));
     ctx.closePath();
-    ctx.fillStyle = "#93c5fd";
+    ctx.fillStyle = palette().constraintHint;
     ctx.fill();
   }
 
@@ -350,7 +401,7 @@ function drawConstraintLines(ctx, restrictions, bounds, width, height, padding =
 
 function drawVertices(ctx, vertices, bounds, width, height, padding = 48) {
   ctx.save();
-  ctx.fillStyle = "#ef4444"; // red-500
+  ctx.fillStyle = palette().vertex;
   for (const p of vertices) {
     const S = worldToScreen(p, bounds, width, height, padding);
     ctx.beginPath();
@@ -379,8 +430,8 @@ function drawObjective(ctx, objective, zValue, bounds, width, height, padding = 
   const A = worldToScreen(inside[0], bounds, width, height, padding);
   const B = worldToScreen(inside[1], bounds, width, height, padding);
   ctx.save();
-  ctx.strokeStyle = "#10b981"; // emerald-500
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = palette().objective;
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
   ctx.moveTo(A.x, A.y);
   ctx.lineTo(B.x, B.y);
@@ -397,7 +448,12 @@ function NumberInput({ value, onChange, placeholder, className }) {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${className ?? ""}`}
+      className={`w-full rounded-xl border px-3 py-2 text-sm
+                 bg-white text-slate-800 border-slate-300 placeholder-slate-400
+                 focus:outline-none focus:ring-2 focus:ring-slate-400
+                 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600
+                 dark:placeholder-slate-400 dark:focus:ring-slate-500
+                 ${className ?? ""}`}
     />
   );
 }
@@ -407,7 +463,12 @@ function Select({ value, onChange, options, className }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${className ?? ""}`}
+      className={`w-full rounded-xl border px-3 py-2 text-sm
+                 bg-white text-slate-800 border-slate-300
+                 focus:outline-none focus:ring-2 focus:ring-slate-400
+                 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600
+                 dark:focus:ring-slate-500
+                 ${className ?? ""}`}
     >
       {options.map((o) => (
         <option key={o} value={o}>{o}</option>
@@ -420,13 +481,28 @@ function ConstraintRow({ idx, row, onChange, onDelete }) {
   const update = (patch) => onChange(idx, { ...row, ...patch });
   return (
     <div className="grid grid-cols-12 gap-2 items-center">
-      <div className="col-span-2 flex items-center gap-1"><span className="text-sm text-gray-600">a{idx+1}</span><NumberInput value={row.ax} onChange={(v)=>update({ax:v})} placeholder="a"/></div>
+      <div className="col-span-2 flex items-center gap-1">
+        <span className="text-sm text-slate-500 dark:text-slate-400">a{idx+1}</span>
+        <NumberInput value={row.ax} onChange={(v)=>update({ax:v})} placeholder="a"/>
+      </div>
       <div className="col-span-1 text-center font-medium">x₁ +</div>
-      <div className="col-span-2 flex items-center gap-1"><span className="text-sm text-gray-600">b{idx+1}</span><NumberInput value={row.by} onChange={(v)=>update({by:v})} placeholder="b"/></div>
+      <div className="col-span-2 flex items-center gap-1">
+        <span className="text-sm text-slate-500 dark:text-slate-400">b{idx+1}</span>
+        <NumberInput value={row.by} onChange={(v)=>update({by:v})} placeholder="b"/>
+      </div>
       <div className="col-span-1 text-center font-medium">x₂</div>
-      <div className="col-span-2"><Select value={row.sense} onChange={(v)=>update({sense:v})} options={[Sense.LE, Sense.GE, Sense.EQ]}/></div>
-      <div className="col-span-3 flex items-center gap-1"><span className="text-sm text-gray-600">c{idx+1}</span><NumberInput value={row.c} onChange={(v)=>update({c:v})} placeholder="c"/></div>
-      <button onClick={()=>onDelete(idx)} className="col-span-1 text-red-600 hover:text-red-700 text-sm">Eliminar</button>
+      <div className="col-span-2">
+        <Select value={row.sense} onChange={(v)=>update({sense:v})} options={[Sense.LE, Sense.GE, Sense.EQ]}/>
+      </div>
+      <div className="col-span-3 flex items-center gap-1">
+        <span className="text-sm text-slate-500 dark:text-slate-400">c{idx+1}</span>
+        <NumberInput value={row.c} onChange={(v)=>update({c:v})} placeholder="c"/>
+      </div>
+      <button
+        onClick={()=>onDelete(idx)}
+        className="col-span-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm">
+        Eliminar
+      </button>
     </div>
   );
 }
@@ -462,7 +538,9 @@ function ExamplePresetButton({ onLoad }) {
         <button
           key={p.name}
           onClick={() => onLoad(p)}
-          className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm"
+          className="px-3 py-1.5 rounded-xl text-sm
+                     bg-slate-100 hover:bg-slate-200
+                     dark:bg-slate-700 dark:hover:bg-slate-600"
         >{p.name}</button>
       ))}
     </div>
@@ -471,7 +549,9 @@ function ExamplePresetButton({ onLoad }) {
 
 function Panel({ title, children, className = "" }) {
   return (
-    <div className={`p-4 border rounded-2xl shadow-sm bg-white ${className}`}>
+    <div className={`p-4 border rounded-2xl shadow-sm
+                     bg-white border-slate-200
+                     dark:bg-slate-800 dark:border-slate-700 ${className}`}>
       {title ? <h2 className="font-semibold mb-3">{title}</h2> : null}
       {children}
     </div>
@@ -510,6 +590,19 @@ export default function LP2DMetodoGrafico() {
     if (best) setZProbe(objective.cx * best.point.x + objective.cy * best.point.y);
   }, [best, objective.cx, objective.cy]);
 
+  // 🔁 Redibujar al cambiar el tema (observa la clase de <html>)
+  const [themeKey, setThemeKey] = useState(0);
+  useEffect(() => {
+    const root = document.documentElement;
+    const obs = new MutationObserver((muts) => {
+      if (muts.some(m => m.attributeName === 'class')) {
+        setThemeKey(k => k + 1);
+      }
+    });
+    obs.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+
   // Dibujo
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -547,17 +640,17 @@ export default function LP2DMetodoGrafico() {
     if (best) {
       const S = worldToScreen(best.point, bounds, w, h);
       ctx.save();
-      ctx.fillStyle = "#16a34a"; // green-600
+      ctx.fillStyle = palette().optPoint;
       ctx.beginPath();
-      ctx.arc(S.x, S.y, 6, 0, 2 * Math.PI);
+      ctx.arc(S.x, S.y, 7, 0, 2 * Math.PI);
       ctx.fill();
       ctx.font = "12px ui-sans-serif, system-ui";
-      ctx.fillStyle = "#065f46";
+      ctx.fillStyle = palette().optText;
       const zFmt = Number(best.z.toFixed(6)).toString();
       ctx.fillText(`${optType} Z* = ${zFmt}`, S.x + 10, S.y - 10);
       ctx.restore();
     }
-  }, [restrictions, bounds, size, candidateVertices, zProbe, objective, optType, best]);
+  }, [restrictions, bounds, size, candidateVertices, zProbe, objective, optType, best, themeKey]);
 
   // Drag de la línea objetivo
   useEffect(() => {
@@ -612,12 +705,12 @@ export default function LP2DMetodoGrafico() {
   }, [candidateVertices, objective]);
 
   return (
-    <div className="min-h-screen w-full bg-white text-gray-900">
+    <div className="min-h-screen w-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
       <div className="max-w-6xl mx-auto p-4 md:p-6">
         <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Método Gráfico – LP en 2 Variables</h1>
-            <p className="text-gray-600 text-sm">Traza restricciones, región factible, isocosto y calcula la solución óptima (vértices).</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Traza restricciones, región factible, isocosto y calcula la solución óptima (vértices).</p>
           </div>
           <ExamplePresetButton onLoad={loadPreset} />
         </header>
@@ -633,17 +726,17 @@ export default function LP2DMetodoGrafico() {
                 </div>
                 <div className="col-span-2 text-center font-medium">Z =</div>
                 <div className="col-span-2 flex items-center gap-1">
-                  <span className="text-sm text-gray-600">c₁</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">c₁</span>
                   <NumberInput value={cx} onChange={setCx} placeholder="c1"/>
                 </div>
                 <div className="col-span-1 text-center font-medium">x₁ +</div>
                 <div className="col-span-2 flex items-center gap-1">
-                  <span className="text-sm text-gray-600">c₂</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">c₂</span>
                   <NumberInput value={cy} onChange={setCy} placeholder="c2"/>
                 </div>
                 <div className="col-span-1 text-center font-medium">x₂</div>
               </div>
-              <div className="mt-2 text-xs text-gray-500">
+              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 Arrastra sobre el lienzo para mover la recta iso-{optType === OptType.MAX ? "utilidad" : "costo"} (valor Z).
               </div>
             </Panel>
@@ -651,8 +744,13 @@ export default function LP2DMetodoGrafico() {
             {/* Restricciones */}
             <Panel title="Restricciones">
               <div className="flex items-center justify-between mb-3">
-                <div className="text-sm text-gray-600">Define cada restricción como: a·x₁ + b·x₂ {`{≤, ≥, =}`} c</div>
-                <button onClick={addRow} className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-sm hover:bg-blue-700">+ Agregar</button>
+                <div className="text-sm text-slate-500 dark:text-slate-400">Define cada restricción como: a·x₁ + b·x₂ {`{≤, ≥, =}`} c</div>
+                <button onClick={addRow}
+                  className="px-3 py-1.5 rounded-xl text-sm
+                             bg-blue-600 hover:bg-blue-700 text-white
+                             dark:bg-blue-500 dark:hover:bg-blue-600">
+                  + Agregar
+                </button>
               </div>
               <div className="space-y-2">
                 {rows.map((r, i) => (
@@ -678,16 +776,16 @@ export default function LP2DMetodoGrafico() {
                   <div>Valor óptimo: <span className="font-mono">Z* = {best.z.toFixed(6)}</span></div>
                 </div>
               ) : (
-                <div className="text-sm text-red-600">No hay solución óptima (región vacía o sin vértices).</div>
+                <div className="text-sm text-red-600 dark:text-red-400">No hay solución óptima (región vacía o sin vértices).</div>
               )}
 
               <details className="mt-3">
                 <summary className="text-sm cursor-pointer select-none">
                   Ver vértices factibles ({solutionList.length})
                 </summary>
-                <div className="mt-2 max-h-48 overflow-auto border rounded-xl">
+                <div className="mt-2 max-h-48 overflow-auto border rounded-xl border-slate-200 dark:border-slate-700">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-slate-100 dark:bg-slate-700">
                       <tr>
                         <th className="p-2 text-left">#</th>
                         <th className="p-2 text-left">x₁</th>
@@ -697,7 +795,7 @@ export default function LP2DMetodoGrafico() {
                     </thead>
                     <tbody>
                       {solutionList.map((p, i) => (
-                        <tr key={i} className="odd:bg-white even:bg-gray-50">
+                        <tr key={i} className="odd:bg-white even:bg-slate-50 dark:odd:bg-slate-800 dark:even:bg-slate-700/60">
                           <td className="p-2">{i + 1}</td>
                           <td className="p-2 font-mono">{p.x.toFixed(6)}</td>
                           <td className="p-2 font-mono">{p.y.toFixed(6)}</td>
@@ -714,7 +812,8 @@ export default function LP2DMetodoGrafico() {
           {/* Panel Derecho: Canvas */}
           <Panel title="Plano x₁–x₂">
             {/* Contenedor que recorta y centra el canvas */}
-            <div className="relative flex justify-center items-center overflow-hidden rounded-2xl border">
+            <div className="relative flex justify-center items-center overflow-hidden rounded-2xl border
+                            border-slate-200 dark:border-slate-700">
               <canvas
                 ref={canvasRef}
                 width={size.w}
@@ -725,14 +824,14 @@ export default function LP2DMetodoGrafico() {
 
             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Ancho</label>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Ancho</label>
                 <NumberInput
                   value={size.w}
                   onChange={(v) => setSize((s) => ({ ...s, w: parseNum(v) || 800 }))}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Alto</label>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Alto</label>
                 <NumberInput
                   value={size.h}
                   onChange={(v) => setSize((s) => ({ ...s, h: parseNum(v) || 520 }))}
@@ -742,7 +841,7 @@ export default function LP2DMetodoGrafico() {
           </Panel>
         </div>
 
-        <footer className="mt-6 text-xs text-gray-500">
+        <footer className="mt-6 text-xs text-slate-500 dark:text-slate-400">
           Sugerencia: Ingresa coeficientes fraccionarios (p. ej., "2.5") o enteros. Usa los presets para probar casos típicos de MAX y MIN.
         </footer>
       </div>
