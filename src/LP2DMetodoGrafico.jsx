@@ -714,33 +714,48 @@ export default function LP2DMetodoGrafico() {
           </div>
 
           {/* Panel Derecho: Canvas */}
-          <div className="p-4 border rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold">Plano x₁–x₂</h2>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span>Arrastra para mover la recta de Z</span>
-              </div>
-            </div>
-            <div className="relative">
-              <canvas ref={canvasRef} width={size.w} height={size.h} className="w-full rounded-xl border"/>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Ancho</label>
-                <NumberInput value={size.w} onChange={(v)=>setSize((s)=>({...s, w: parseNum(v)||800}))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Alto</label>
-                <NumberInput value={size.h} onChange={(v)=>setSize((s)=>({...s, h: parseNum(v)||520}))} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <footer className="mt-6 text-xs text-gray-500">
-          Sugerencia: Ingresa coeficientes fraccionarios (p. ej., "2.5") o enteros. Usa los presets para probar casos típicos de MAX y MIN.
-        </footer>
-      </div>
+<div className="p-4 border rounded-2xl shadow-sm">
+  <div className="flex items-center justify-between mb-2">
+    <h2 className="font-semibold">Plano x₁–x₂</h2>
+    <div className="flex items-center gap-2 text-xs text-gray-500">
+      <span>Arrastra para mover la recta de Z</span>
     </div>
-  );
+  </div>
+
+  {/* 🔧 Contenedor que recorta y centra el canvas */}
+  <div className="relative flex justify-center items-center overflow-hidden rounded-2xl border">
+    <canvas
+      ref={canvasRef}
+      width={size.w}
+      height={size.h}
+      className="max-w-full h-auto shadow-md"
+    />
+  </div>
+
+  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+    <div>
+      <label className="block text-xs text-gray-600 mb-1">Ancho</label>
+      <NumberInput
+        value={size.w}
+        onChange={(v) => setSize((s) => ({ ...s, w: parseNum(v) || 800 }))}
+      />
+    </div>
+    <div>
+      <label className="block text-xs text-gray-600 mb-1">Alto</label>
+      <NumberInput
+        value={size.h}
+        onChange={(v) => setSize((s) => ({ ...s, h: parseNum(v) || 520 }))}
+      />
+    </div>
+  </div>
+</div>
+
+</div>
+
+<footer className="mt-6 text-xs text-gray-500">
+  Sugerencia: Ingresa coeficientes fraccionarios (p. ej., "2.5") o enteros. Usa los presets para probar casos típicos de MAX y MIN.
+</footer>
+</div>
+</div>
+);
 }
